@@ -22,7 +22,7 @@ def get_recent_fragment_timestamp(kvam):
         FragmentSelector={
             'FragmentSelectorType': 'PRODUCER_TIMESTAMP',
             'TimestampRange': {
-                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=5),
+                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=1500),
                 'EndTimestamp': datetime.datetime.now()
             }
         }
@@ -36,9 +36,9 @@ def get_recent_fragment_timestamp(kvam):
     highest_fragment_number = 0
     most_recent_fragment = None
     for fragment in fragments:
-        if fragments['FragmentNumber'] >= highest_fragment_number:
+        if int(fragment['FragmentNumber']) >= highest_fragment_number:
             most_recent_fragment = fragment
-            highest_fragment_number = fragments['FragmentNumber']
+            highest_fragment_number = int(fragment['FragmentNumber'])
 
     # Return the producer timestamp of fragment with highest fragment number
     return most_recent_fragment['ProducerTimestamp']
@@ -64,7 +64,7 @@ def get_kinesis_url(message):
     # Do a loop to try to workaround the error 
     # Exception getting kinesis_url: An error occurred (ResourceNotFoundException) when calling the GetHLSStreamingSessionURL operation: No fragments found in the stream for the streaming request. stream_starttime: 2020-12-30 05:47:48.973288
     # Which might be a race condition
-    for i in range(15):
+    for i in range(5):
     
         try:
             # Get a kinesis video endpoint
