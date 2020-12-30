@@ -55,7 +55,7 @@ Define a new SNS topic called `AwsDeepLensSNS` and subscribe your email address 
 
 1. Under Permissions, open the generated role (eg, AWSDeeplensSNSDeduped-role-es8t9bve) and add the following policies: **AmazonKinesisVideoStreamsFullAccess** and **AmazonSNSFullAccess** (there's probably a more secure way, please file an issue if you have ideas)
 
-1. Under Basic Settings, set the timeout to 0 min 30 sec
+1. Under Basic Settings, set the timeout to 1 min 0 sec
 
 1. Hit the Deploy button 
 
@@ -100,7 +100,11 @@ TODO
 
 ## References
 
+* [Amazon Kinesis Video Streams Adds Support For HLS Output Streams](https://aws.amazon.com/blogs/aws/amazon-kinesis-video-streams-adds-support-for-hls-output-streams/)
+
 * [DeepLens_Kinesis_Video Module for Amazon Kinesis Video Streams Integration](https://docs.aws.amazon.com/deeplens/latest/dg/deeplens-kinesis-video-streams-api.html)
+
+* [Extend AWS DeepLens to Send SMS Notifications with AWS Lambda](https://aws.amazon.com/blogs/machine-learning/extend-aws-deeplens-to-send-sms-notifications-with-aws-lambda/)
 
 * [AWS api docs for get_hls_streaming_session_url](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_reader_GetHLSStreamingSessionURL.html)
 
