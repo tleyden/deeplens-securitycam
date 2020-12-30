@@ -8,9 +8,49 @@ import time
 import datetime
 from botocore.config import Config
 
-playback_mode = "LIVE"  # or "LIVE_REPLAY"
+playback_mode = "LIVE_REPLAY"  # or "LIVE_REPLAY"
+STREAM_NAME = "DeepLensPersonDetector"
 
 print('Loading message function...')
+
+def get_recent_fragment_timestamp(kvam):
+
+    # Get a list of fragments from last 5 minutes 
+    fragments = kvam.list_fragments(
+        StreamName=STREAM_NAME,
+        MaxResults=1000,
+        FragmentSelector={
+            'FragmentSelectorType': 'PRODUCER_TIMESTAMP',
+            'TimestampRange': {
+                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=5),
+                'EndTimestamp': datetime.datetime.now()
+            }
+        }
+    )['Fragments']
+
+    # If no fragments found, throw an exception
+    if len(fragments) == 0:
+        raise Exception("No recent fragments found")
+
+    # Find fragment with highest fragment number
+    highest_fragment_number = 0
+    most_recent_fragment = None
+    for fragment in fragments:
+        if fragments['FragmentNumber'] >= highest_fragment_number:
+            most_recent_fragment = fragment
+            highest_fragment_number = fragments['FragmentNumber']
+
+    # Return the producer timestamp of fragment with highest fragment number
+    return most_recent_fragment['ProducerTimestamp']
+
+def get_timestamp_from_message(message):
+    # overall approach not working!!  I don't know why, maybe there is increased delay before this is available.
+    fmt = '%Y-%m-%dT%H:%M:%S.%f'
+    message_timestamp = message['timestamp']
+    print("message_timestamp: {}".format(str(message_timestamp)))
+    stream_starttime = datetime.datetime.strptime(message_timestamp, fmt)
+    print("stream_starttime: {}".format(str(stream_starttime)))
+    return stream_starttime
 
 def get_kinesis_url(message):
     
@@ -28,7 +68,6 @@ def get_kinesis_url(message):
     
         try:
             # Get a kinesis video endpoint
-            STREAM_NAME = "DeepLensPersonDetector"
             kvs = boto3.client("kinesisvideo", config=my_config)
             # Grab the endpoint from GetDataEndpoint
             endpoint = kvs.get_data_endpoint(
@@ -47,14 +86,10 @@ def get_kinesis_url(message):
                 )['HLSStreamingSessionURL']
                 
             else:
-                
-                # not working!!  I don't know why, maybe there is increased delay before this is available.
-                
-                fmt = '%Y-%m-%dT%H:%M:%S.%f'
-                message_timestamp = message['timestamp']
-                print("message_timestamp: {}".format(str(message_timestamp)))
-                stream_starttime = datetime.datetime.strptime(message_timestamp, fmt)
-                print("stream_starttime: {}".format(str(stream_starttime)))
+
+                # stream_starttime = get_timestamp_from_message(message)
+                stream_starttime = get_recent_fragment_timestamp(kvam)
+                print("get_recent_fragment_timestamp returned: {}".format(stream_starttime))
                 
                 kinesis_url = kvam.get_hls_streaming_session_url(
                     StreamName=STREAM_NAME,
