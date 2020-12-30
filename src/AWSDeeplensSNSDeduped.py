@@ -152,9 +152,16 @@ def send_to_sns(message, context):
         Message='Person detected, check em out at: ' + str(kinesis_url) + ' orig msg: ' + str(message)
     )
 
-    return ('sent_x_seconds_ago: {} within range.  sending SNS'.format(sent_x_seconds_ago))
+    result = ('sent_x_seconds_ago: {} within range.  sending SNS'.format(sent_x_seconds_ago))
+    print(result)
+    return result
 
 def last_message_sent_x_seconds_ago():
+
+    """
+    The /tmp file approach is a dirty hack and isn't very reliable.  A database or a lambda
+    step function state machine would be a better approach.
+    """
     
     last_sent_filename = "/tmp/last_sent_file"
     
