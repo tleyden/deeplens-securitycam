@@ -10,6 +10,7 @@ from botocore.config import Config
 
 playback_mode = "LIVE_REPLAY"  # or "LIVE_REPLAY"
 STREAM_NAME = "DeepLensPersonDetector"
+FRAGMENT_SELECTOR_TYPE='SERVER_TIMESTAMP' # or PRODUCER_TIMESTAMP
 
 print('Loading message function...')
 
@@ -20,9 +21,9 @@ def get_recent_fragment_timestamp(kvam):
         StreamName=STREAM_NAME,
         MaxResults=1000,
         FragmentSelector={
-            'FragmentSelectorType': 'PRODUCER_TIMESTAMP',
+            'FragmentSelectorType': FRAGMENT_SELECTOR_TYPE,
             'TimestampRange': {
-                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=1500),
+                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=15),
                 'EndTimestamp': datetime.datetime.now()
             }
         }
@@ -40,8 +41,11 @@ def get_recent_fragment_timestamp(kvam):
             most_recent_fragment = fragment
             highest_fragment_number = int(fragment['FragmentNumber'])
 
-    # Return the producer timestamp of fragment with highest fragment number
-    return most_recent_fragment['ProducerTimestamp']
+    # Return the timestamp of fragment with highest fragment number
+    if FRAGMENT_SELECTOR_TYPE == 'PRODUCER_TIMESTAMP':
+        return most_recent_fragment['ProducerTimestamp']
+    else:
+        return most_recent_fragment['ServerTimestamp']
 
 def get_timestamp_from_message(message):
     # overall approach not working!!  I don't know why, maybe there is increased delay before this is available.
@@ -64,7 +68,7 @@ def get_kinesis_url(message):
     # Do a loop to try to workaround the error 
     # Exception getting kinesis_url: An error occurred (ResourceNotFoundException) when calling the GetHLSStreamingSessionURL operation: No fragments found in the stream for the streaming request. stream_starttime: 2020-12-30 05:47:48.973288
     # Which might be a race condition
-    for i in range(5):
+    for i in range(15):
     
         try:
             # Get a kinesis video endpoint
@@ -95,7 +99,7 @@ def get_kinesis_url(message):
                     StreamName=STREAM_NAME,
                     PlaybackMode="LIVE_REPLAY",
                     HLSFragmentSelector={
-                        'FragmentSelectorType': 'PRODUCER_TIMESTAMP',
+                        'FragmentSelectorType': FRAGMENT_SELECTOR_TYPE,
                         'TimestampRange': {
                             'StartTimestamp': stream_starttime
                         }
