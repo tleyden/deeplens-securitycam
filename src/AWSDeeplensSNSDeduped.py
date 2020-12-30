@@ -15,7 +15,7 @@ SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 
 def get_recent_fragment_timestamp(kvam):
 
-    # Get a list of fragments from last 5 minutes 
+    # Get a list of recent fragments 
     fragments = kvam.list_fragments(
         StreamName=STREAM_NAME,
         MaxResults=1000,
@@ -33,6 +33,7 @@ def get_recent_fragment_timestamp(kvam):
         raise Exception("No recent fragments found")
 
     # Find fragment with highest fragment number
+    # Not exactly efficient, but hopefully there is a better way and this can get thrown away.
     highest_fragment_number = 0
     most_recent_fragment = None
     for fragment in fragments:
@@ -47,7 +48,8 @@ def get_recent_fragment_timestamp(kvam):
         return most_recent_fragment['ServerTimestamp']
 
 def get_timestamp_from_message(message):
-    # overall approach not working!!  I don't know why, maybe there is increased delay before this is available.
+    # Overall approach not working!!  
+    # It seems to always return Exception getting kinesis_url: An error occurred (ResourceNotFoundException) when calling the GetHLSStreamingSessionURL operation: No fragments found in the stream for the streaming request. stream_starttime: 2020-12-30 05:47:48.973288
     fmt = '%Y-%m-%dT%H:%M:%S.%f'
     message_timestamp = message['timestamp']
     print("message_timestamp: {}".format(str(message_timestamp)))
@@ -56,6 +58,14 @@ def get_timestamp_from_message(message):
     return stream_starttime
 
 def get_kinesis_url(message):
+
+    """
+    The kinesis hls streaming session url is the most important part of the email notification,
+    since clicking it will show a video stream starting at the point of detection, which will 
+    hopefully include the detected person.
+
+    This part is not working reliably yet (see known issues in README).
+    """
     
     kinesis_url = ""
     
@@ -64,9 +74,8 @@ def get_kinesis_url(message):
         region_name = 'us-east-1',
     )
     
-    # Do a loop to try to workaround the error 
-    # Exception getting kinesis_url: An error occurred (ResourceNotFoundException) when calling the GetHLSStreamingSessionURL operation: No fragments found in the stream for the streaming request. stream_starttime: 2020-12-30 05:47:48.973288
-    # Which might be a race condition
+    # The reason this loops is to try to "wait" until fragments are available on the stream.
+    # It will sleep 1s in between each loop iteration.
     for i in range(15):
     
         try:
@@ -96,6 +105,7 @@ def get_kinesis_url(message):
                 
                 kinesis_url = kvam.get_hls_streaming_session_url(
                     StreamName=STREAM_NAME,
+                    Expires=43200, # 12 hours
                     PlaybackMode="LIVE_REPLAY",
                     HLSFragmentSelector={
                         'FragmentSelectorType': FRAGMENT_SELECTOR_TYPE,
@@ -109,7 +119,7 @@ def get_kinesis_url(message):
             return kinesis_url
             
         except Exception as ex:
-            
+
             print("Exception getting kinesis_url: {}.  Sleeping and retrying {}th time".format(ex, i))
             
             # Sleep before trying again
@@ -121,12 +131,20 @@ def get_kinesis_url(message):
 
 def send_to_sns(message, context):
 
+    """
+    Send to SNS with de-duping to avoid firing off too many duplicate notifications.
+    It de-dupes by writing to a temp file, and future (hotstart) lambda invocations 
+    check the temp file to see how long ago the last notification was sent.
+    """
+
     sent_x_seconds_ago = last_message_sent_x_seconds_ago()
     if sent_x_seconds_ago < 30:
         return ('sent_x_seconds_ago: {} is too recent.  not sending SNS'.format(sent_x_seconds_ago))
     
+    # Get the kinesis HLS streaming url to include in the message
     kinesis_url = get_kinesis_url(message)
     
+    # Send SNS
     sns = boto3.client('sns')
     sns.publish(
         TopicArn=SNS_TOPIC_ARN,
