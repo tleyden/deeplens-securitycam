@@ -100,4 +100,11 @@ TODO
 
 ## References
 
+* [DeepLens_Kinesis_Video Module for Amazon Kinesis Video Streams Integration](https://docs.aws.amazon.com/deeplens/latest/dg/deeplens-kinesis-video-streams-api.html)
+
+* [AWS api docs for get_hls_streaming_session_url](https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/API_reader_GetHLSStreamingSessionURL.html)
+
+* [Boto API docs for get_hls_streaming_session_url](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/kinesis-video-archived-media.html#KinesisVideoArchivedMedia.Client.get_hls_streaming_session_url)
+
 * [DeepLens sample projects](https://docs.aws.amazon.com/deeplens/latest/dg/deeplens-templated-projects-overview.html)
+
