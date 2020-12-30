@@ -5,6 +5,7 @@ import urllib
 import boto3
 import os
 import time
+import sys
 import datetime
 from botocore.config import Config
 
@@ -22,7 +23,7 @@ def get_recent_fragment_timestamp(kvam):
         FragmentSelector={
             'FragmentSelectorType': FRAGMENT_SELECTOR_TYPE,
             'TimestampRange': {
-                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=15),
+                'StartTimestamp': datetime.datetime.now() - datetime.timedelta(minutes=2),
                 'EndTimestamp': datetime.datetime.now()
             }
         }
@@ -32,20 +33,20 @@ def get_recent_fragment_timestamp(kvam):
     if len(fragments) == 0:
         raise Exception("No recent fragments found")
 
-    # Find fragment with highest fragment number
+    # Find fragment with lowest fragment number (earliest)
     # Not exactly efficient, but hopefully there is a better way and this can get thrown away.
-    highest_fragment_number = 0
-    most_recent_fragment = None
+    lowest_fragment_number = int(fragments[0]['FragmentNumber'])
+    least_recent_fragment = None
     for fragment in fragments:
-        if int(fragment['FragmentNumber']) >= highest_fragment_number:
-            most_recent_fragment = fragment
-            highest_fragment_number = int(fragment['FragmentNumber'])
+        if int(fragment['FragmentNumber']) <= lowest_fragment_number:
+            least_recent_fragment = fragment
+            lowest_fragment_number = int(fragment['FragmentNumber'])
 
     # Return the timestamp of fragment with highest fragment number
     if FRAGMENT_SELECTOR_TYPE == 'PRODUCER_TIMESTAMP':
-        return most_recent_fragment['ProducerTimestamp']
+        return least_recent_fragment['ProducerTimestamp']
     else:
-        return most_recent_fragment['ServerTimestamp']
+        return least_recent_fragment['ServerTimestamp']
 
 def get_timestamp_from_message(message):
     # Overall approach not working!!  
@@ -76,7 +77,7 @@ def get_kinesis_url(message):
     
     # The reason this loops is to try to "wait" until fragments are available on the stream.
     # It will sleep 1s in between each loop iteration.
-    for i in range(15):
+    for i in range(60):
     
         try:
             # Get a kinesis video endpoint
