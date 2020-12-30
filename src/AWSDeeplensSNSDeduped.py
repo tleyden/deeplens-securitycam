@@ -11,8 +11,7 @@ from botocore.config import Config
 playback_mode = "LIVE_REPLAY"  # or "LIVE_REPLAY"
 STREAM_NAME = "DeepLensPersonDetector"
 FRAGMENT_SELECTOR_TYPE='SERVER_TIMESTAMP' # or PRODUCER_TIMESTAMP
-
-print('Loading message function...')
+SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 
 def get_recent_fragment_timestamp(kvam):
 
@@ -110,6 +109,7 @@ def get_kinesis_url(message):
             return kinesis_url
             
         except Exception as ex:
+            
             print("Exception getting kinesis_url: {}.  Sleeping and retrying {}th time".format(ex, i))
             
             # Sleep before trying again
@@ -129,7 +129,7 @@ def send_to_sns(message, context):
     
     sns = boto3.client('sns')
     sns.publish(
-        TopicArn='arn:aws:sns:us-east-1:193822812427:AwsDeepLensSNS',
+        TopicArn=SNS_TOPIC_ARN,
         Subject='DeepLens Lambda notification',
         Message='Person detected, check em out at: ' + str(kinesis_url) + ' orig msg: ' + str(message)
     )
