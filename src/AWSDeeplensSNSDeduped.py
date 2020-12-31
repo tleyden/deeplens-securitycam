@@ -32,6 +32,7 @@ def get_recent_fragment_timestamp(kvam):
     # If no fragments found, throw an exception
     if len(fragments) == 0:
         raise Exception("No recent fragments found")
+    print("Found {} recent fragments".format(len(fragments)))
 
     # Find fragment with lowest fragment number (earliest)
     # Not exactly efficient, but hopefully there is a better way and this can get thrown away.
@@ -77,7 +78,7 @@ def get_kinesis_url(message):
     
     # The reason this loops is to try to "wait" until fragments are available on the stream.
     # It will sleep 1s in between each loop iteration.
-    for i in range(60):
+    for i in range(20):
     
         try:
             # Get a kinesis video endpoint
